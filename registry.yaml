@@ -1,0 +1,68 @@
+# 크롤러 레지스트리 (기본)
+# 오케스트레이터 inventory/status 명령에서 참조.
+# 수정하려면 DB/_registry.yaml로 복사 후 편집.
+
+sources:
+
+  sillok:
+    name: 조선왕조실록
+    name_hanja: 朝鮮王朝實錄
+    platform: sillok.history.go.kr
+    period: 조선
+    skill: sillok-crawler
+    db_path: DB/Sillok
+    scripts:
+      search: sillok-crawler/scripts/sillok_search.py
+      crawl: sillok-crawler/scripts/sillok_crawler.py
+      index_sync: sillok-crawler/scripts/sillok_index_sync.py
+    modes: [search, file]
+
+  sjw:
+    name: 승정원일기
+    name_hanja: 承政院日記
+    platform: sjw.history.go.kr
+    period: 조선
+    skill: sjw-crawler
+    db_path: DB/SJW
+    scripts:
+      search: sjw-crawler/scripts/sjw_search.py
+      crawl: sjw-crawler/scripts/sjw_crawler.py
+      index_sync: null
+    modes: [search, browse]
+
+  munzip:
+    name: 한국고전종합DB (문집)
+    name_hanja: 韓國古典綜合DB
+    platform: db.itkc.or.kr
+    period: 조선
+    skill: munzip-crawler
+    db_path: DB/Munzip
+    scripts:
+      search: null
+      crawl: munzip-crawler/scripts/munzip_crawler.py
+      index_sync: munzip-crawler/scripts/munzip_index_sync.py
+    modes: [search, full]
+
+  modern:
+    name: 한국근대사료DB
+    platform: db.history.go.kr/modern
+    period: 근대
+    skill: modern-crawler
+    db_path: DB/Modern
+    scripts:
+      search: modern-crawler/scripts/modern_search.py
+      crawl: modern-crawler/scripts/modern_crawler.py
+      index_sync: null
+    modes: [search, browse]
+
+  newslibrary:
+    name: 네이버 뉴스 라이브러리
+    platform: newslibrary.naver.com
+    period: 근대
+    skill: newslibrary-crawler
+    db_path: DB/NewsLibrary
+    scripts:
+      search: newslibrary-crawler/scripts/newslibrary_search.py
+      crawl: newslibrary-crawler/scripts/newslibrary_crawler.py
+      index_sync: newslibrary-crawler/scripts/newslibrary_index_sync.py
+    modes: [search, detail, browse]
