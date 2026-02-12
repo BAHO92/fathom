@@ -1,68 +1,62 @@
-# 크롤러 레지스트리 (기본)
-# 오케스트레이터 inventory/status 명령에서 참조.
-# 수정하려면 DB/_registry.yaml로 복사 후 편집.
+schema_version: "1.0"
 
-sources:
-
+databases:
   sillok:
     name: 조선왕조실록
+    name_en: Joseon Wangjo Sillok
     name_hanja: 朝鮮王朝實錄
-    platform: sillok.history.go.kr
+    url: https://sillok.history.go.kr
     period: 조선
-    skill: sillok-crawler
-    db_path: DB/Sillok
+    selectors: [query, work_scope, ids]
+    options:
+      tab:
+        default: w
+        choices: [w, k]
+        description: "검색 대상 (w=원문, k=국역)"
+    appendix_fields:
+      - day_articles
+      - prev_article_id
+      - next_article_id
+      - place_annotations
+      - book_annotations
     scripts:
-      search: sillok-crawler/scripts/sillok_search.py
-      crawl: sillok-crawler/scripts/sillok_crawler.py
-      index_sync: sillok-crawler/scripts/sillok_index_sync.py
-    modes: [search, file]
+      crawl: dbs/sillok/scripts/sillok_crawler.py
+      search: dbs/sillok/scripts/sillok_search.py
+      index_sync: dbs/sillok/scripts/sillok_index_sync.py
 
   sjw:
     name: 승정원일기
+    name_en: Seungjeongwon Ilgi
     name_hanja: 承政院日記
-    platform: sjw.history.go.kr
+    url: https://sjw.history.go.kr
     period: 조선
-    skill: sjw-crawler
-    db_path: DB/SJW
+    selectors: [query, time_range, work_scope, ids]
+    options:
+      field:
+        default: all
+        choices: [all, person, place, official, book]
+        description: "검색 필드 필터"
+    appendix_fields:
+      - person_annotations
+      - day_total_articles
     scripts:
-      search: sjw-crawler/scripts/sjw_search.py
-      crawl: sjw-crawler/scripts/sjw_crawler.py
-      index_sync: null
-    modes: [search, browse]
+      crawl: dbs/sjw/scripts/sjw_crawler.py
+      search: dbs/sjw/scripts/sjw_search.py
 
-  munzip:
+  itkc:
     name: 한국고전종합DB (문집)
+    name_en: ITKC Classical Texts DB
     name_hanja: 韓國古典綜合DB
-    platform: db.itkc.or.kr
+    url: https://db.itkc.or.kr
     period: 조선
-    skill: munzip-crawler
-    db_path: DB/Munzip
+    selectors: [query, work_scope, ids]
+    options:
+      collection:
+        default: null
+        description: "서지ID (예: ITKC_MO_0367A)"
+    appendix_fields:
+      - page_markers
+      - indent_levels
     scripts:
-      search: null
-      crawl: munzip-crawler/scripts/munzip_crawler.py
-      index_sync: munzip-crawler/scripts/munzip_index_sync.py
-    modes: [search, full]
-
-  modern:
-    name: 한국근대사료DB
-    platform: db.history.go.kr/modern
-    period: 근대
-    skill: modern-crawler
-    db_path: DB/Modern
-    scripts:
-      search: modern-crawler/scripts/modern_search.py
-      crawl: modern-crawler/scripts/modern_crawler.py
-      index_sync: null
-    modes: [search, browse]
-
-  newslibrary:
-    name: 네이버 뉴스 라이브러리
-    platform: newslibrary.naver.com
-    period: 근대
-    skill: newslibrary-crawler
-    db_path: DB/NewsLibrary
-    scripts:
-      search: newslibrary-crawler/scripts/newslibrary_search.py
-      crawl: newslibrary-crawler/scripts/newslibrary_crawler.py
-      index_sync: newslibrary-crawler/scripts/newslibrary_index_sync.py
-    modes: [search, detail, browse]
+      crawl: dbs/itkc/scripts/munzip_crawler.py
+      index_sync: dbs/itkc/scripts/munzip_index_sync.py

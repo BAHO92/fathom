@@ -1,1 +1,11 @@
-{"db_root": ""}
+{
+  "db_root": "~/DB",
+  "enabled_dbs": ["sillok", "sjw", "itkc"],
+  "appendix_fields": {
+    "sillok": [],
+    "sjw": [],
+    "itkc": []
+  },
+  "language": "ko",
+  "extended_provenance": false
+}
