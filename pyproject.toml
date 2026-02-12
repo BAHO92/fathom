@@ -1,6 +1,17 @@
 [project]
 name = "fathom"
-version = "0.1.0"
+version = "1.0.0"
+description = "Historical source crawler for Claude Code"
+requires-python = ">=3.8"
+dependencies = [
+    "requests",
+    "beautifulsoup4",
+    "lxml",
+    "pyyaml",
+]
 
 [tool.pytest.ini_options]
-markers = ["integration"]
+markers = [
+    "integration: tests that require internet access to historical DB sites",
+]
+testpaths = ["tests"]
