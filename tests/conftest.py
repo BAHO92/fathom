@@ -120,11 +120,15 @@ class StubSjwSearcher:
     def __init__(self): pass
     def setup_session(self): pass
     def close(self): pass
-    def search(self, keywords, field="all"): return (0, [], None)
-    def search_and_collect(self, keyword, field="all"): return {"entries": []}
+    def search(self, keywords, field="all", king_name="ALL"): return (0, [], None)
+    def search_and_collect(self, keyword, field="all", king_name="ALL", limit=None): return {"entries": []}
+
+def _stub_sjw_filter_by_reign_range(entries, from_, to_):
+    return entries
 
 sjw_search_mod = _make_module("sjw_search", {
     "SjwSearcher": StubSjwSearcher,
+    "filter_by_reign_range": _stub_sjw_filter_by_reign_range,
 })
 
 

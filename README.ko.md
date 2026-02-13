@@ -148,7 +148,7 @@ Appendix는 기사 본문·메타데이터 외에 추가로 수집하는 부수 
 이제 크롤링을 시작하실 수 있습니다!
 ```
 
-> **설정을 변경하고 싶다면**: fathom 설치 폴더(`~/.claude/skills/fathom/`)의 `config.json`을 직접 수정하거나, 삭제하면 다음 실행 시 초기 설정이 다시 시작됩니다.
+> **설정을 변경하고 싶다면**: fathom 설치 폴더(`~/.claude/skills/fathom/`)의 `config.json`을 직접 수정하거나, 삭제하면 다음 실행 시 초기 설정이 다시 시작됩니다. Claude에게 "fathom 설정 변경해줘"라고 요청하셔도 됩니다.
 
 ---
 
@@ -199,10 +199,10 @@ fathom은 네 가지 수집 방식(A–D)을 지원합니다.
 | 파라미터 | 필수 | 설명 |
 |----------|------|------|
 | `keywords` | ✅ | 검색어. 쉼표 구분으로 복수 가능 (예: `"송시열,허목"`) |
-| `layer` | | `"original"` / `"translation"` / 생략 시 양쪽 모두 (실록만) |
-| `reign` | | 왕대별 필터링 (실록만) |
-| `field` | | `"all"` (기본) / `"title"` / `"content"` (승정원일기만) |
-| `limit` | | 최대 수집 건수 (조기 적용 — 페이지네이션 중 도달 시 즉시 중단) |
+| `layer` | | `"original"` / `"translation"` / 생략 시 양쪽 모두. 실록은 원문(한문) 탭과 국역(번역) 탭이 분리되어 있어 검색 대상을 선택할 수 있습니다. (실록만) |
+| `reign` | | 왕대별 필터링 (예: `"현종"`) (실록, 승정원일기) |
+
+> 승정원일기는 입시(attendance), 날씨(weather), 인명, 지명 등 세부 검색 필드도 지원합니다. 자연어로 요청하면 Claude가 적절한 필드를 선택합니다.
 
 **자연어 예시**:
 ```
@@ -214,10 +214,10 @@ fathom은 네 가지 수집 방식(A–D)을 지원합니다.
 **셀렉터 예시**:
 ```python
 # 실록: "송시열" 원문 검색, 50건 제한
-{"db": "sillok", "type": "query", "keywords": "송시열", "layer": "original", "limit": 50}
+{"db": "sillok", "type": "query", "keywords": "송시열", "layer": "original"}
 
 # 승정원일기: "허목" 제목 필드만 검색
-{"db": "sjw", "type": "query", "keywords": "허목", "options": {"field": "title"}, "limit": 20}
+{"db": "sjw", "type": "query", "keywords": "허목", "options": {"field": "title"}}
 
 # ITKC: 문집에서 복수 키워드 검색
 {"db": "itkc", "type": "query", "keywords": "송시열,허목"}
@@ -236,7 +236,6 @@ fathom은 네 가지 수집 방식(A–D)을 지원합니다.
 | `reign` | ✅ | 왕대명 (예: `"현종"`, `"숙종"`) |
 | `year_from` | | 시작 연도 (0 = 즉위년). 생략 시 전체 |
 | `year_to` | | 종료 연도. 생략 시 `year_from`과 동일 |
-| `limit` | | 최대 수집 건수 (조기 적용 — 일자별 수집 중 도달 시 즉시 중단) |
 
 **자연어 예시**:
 ```
@@ -248,7 +247,7 @@ fathom은 네 가지 수집 방식(A–D)을 지원합니다.
 **셀렉터 예시**:
 ```python
 # 현종 1년만
-{"db": "sjw", "type": "time_range", "reign": "현종", "year_from": 1, "year_to": 1, "limit": 50}
+{"db": "sjw", "type": "time_range", "reign": "현종", "year_from": 1, "year_to": 1}
 
 # 숙종 3년~5년
 {"db": "sjw", "type": "time_range", "reign": "숙종", "year_from": 3, "year_to": 5}
@@ -257,7 +256,7 @@ fathom은 네 가지 수집 방식(A–D)을 지원합니다.
 {"db": "sjw", "type": "time_range", "reign": "인조", "year_from": 0, "year_to": 0}
 ```
 
-**동작 과정**: 월 목록 수집 → 연도 필터링 → 일자별 순회 → 기사 ID 수집 → 각 기사 크롤링. `limit` 지정 시 기사 ID 수집 단계에서 조기 종료합니다.
+**동작 과정**: 월 목록 수집 → 연도 필터링 → 일자별 순회 → 기사 ID 수집 → 각 기사 크롤링.
 
 ---
 
@@ -272,13 +271,11 @@ fathom은 네 가지 수집 방식(A–D)을 지원합니다.
 | `work_kind` | ✅ | `"collection"` (itkc) / `"reign"` (sjw, sillok) |
 | `work_id` | ✅ | 컬렉션 ID (예: `"ITKC_MO_0367A"`) 또는 왕대명 (예: `"현종"`) |
 | `segment` | | SJW: 연도 범위 (예: `"5"` 또는 `"5-10"`), 실록: 권 범위 (예: `"1-5"`) |
-| `limit` | | 최대 수집 건수 (조기 적용) |
 
 **자연어 예시**:
 ```
 "문집 ITKC_MO_0367A 전체 수집해줘"
 "승정원일기 현종 전체, 5년~10년만"
-"문집 ITKC_MO_0367A에서 100건만 수집해줘"
 ```
 
 **셀렉터 예시**:
@@ -287,10 +284,9 @@ fathom은 네 가지 수집 방식(A–D)을 지원합니다.
 {"db": "itkc", "type": "work_scope", "work_kind": "collection", "work_id": "ITKC_MO_0367A"}
 
 # 승정원일기: 현종 5년~10년만 (segment 활용)
-{"db": "sjw", "type": "work_scope", "work_kind": "reign", "work_id": "현종", "segment": "5-10", "limit": 50}
+{"db": "sjw", "type": "work_scope", "work_kind": "reign", "work_id": "현종", "segment": "5-10"}
 ```
 
-> **참고**: SJW `work_scope`에서 segment 없이 사용하면 전체 재위 기간을 수집하므로 장기 재위(15년+)에서는 상당한 시간이 걸립니다. `segment` 및/또는 `limit`을 함께 지정하세요.
 
 ---
 

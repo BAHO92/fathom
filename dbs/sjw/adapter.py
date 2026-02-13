@@ -26,7 +26,7 @@ from sjw_crawler import (
     KING_NAMES_TO_CODES,
     SJW_BASE,
 )
-from sjw_search import SjwSearcher
+from sjw_search import SjwSearcher, filter_by_reign_range
 
 from dbs.base import BaseAdapter, CountResult, CrawlResult
 from engine.config import FathomConfig
@@ -226,11 +226,20 @@ class SJWAdapter(BaseAdapter):
             field = selector.options.get("field", "all")
             keywords = [k.strip() for k in (selector.keywords or "").split(",") if k.strip()]
 
+            # Server-side reign filter: if single reign, pass to searcher
+            king_name = "ALL"
+            if selector.reign:
+                reign_to = selector.options.get("reign_to", selector.reign)
+                if selector.reign == reign_to:
+                    king_name = selector.reign
+
             all_entries: List[dict] = []
             seen_ids: set = set()
             for kw in keywords:
                 kw_limit = (limit - len(all_entries)) if limit else None
-                result = searcher.search_and_collect(kw, field=field, limit=kw_limit)
+                result = searcher.search_and_collect(
+                    kw, field=field, king_name=king_name, limit=kw_limit,
+                )
                 for e in result["entries"]:
                     if e["id"] not in seen_ids:
                         seen_ids.add(e["id"])
@@ -239,6 +248,13 @@ class SJWAdapter(BaseAdapter):
                     break
                 if kw != keywords[-1]:
                     time.sleep(1)
+
+            # Client-side reign range filter (for multi-reign ranges)
+            if selector.reign:
+                reign_to = selector.options.get("reign_to", selector.reign)
+                all_entries = filter_by_reign_range(
+                    all_entries, selector.reign, reign_to,
+                )
 
             return [_normalise_search_entry(e) for e in all_entries]
         finally:
