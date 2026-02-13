@@ -84,11 +84,15 @@ report = execute(adapter, selector, config, limit=None)
 
 `config.json`이 없으면 사용자의 요청을 실행하기 **전에** 반드시 온보딩을 완료해야 합니다.
 
-**3단계 전부 완료 필수 — 어떤 단계도 스킵하지 마세요:**
+**3단계 전부 완료 필수 — 어떤 단계도 스킵하지 마세요.**
+
+⚠️ **반드시 한 단계씩 순서대로 진행하세요.** 3개를 동시에 묻지 마세요.
+Step 2 결과(활성 DB)에 따라 Step 3에서 보여줄 appendix 필드가 달라지기 때문입니다.
 
 1. **저장 경로** — `get_db_root_prompt()` 호출 → 사용자 입력 대기
 2. **활성 DB** — `get_db_selection_prompt()` 호출 → 사용자 입력 대기 (사용자의 첫 요청이 특정 DB를 지칭하더라도, 향후 다른 DB 사용을 위해 반드시 설정)
 3. **Appendix 필드** — `get_appendix_prompt(enabled_dbs)` 호출 → 번호로 선택 또는 Enter로 스킵
+   - `enabled_dbs`에는 **Step 2에서 선택된 전체 DB 목록**을 넘깁니다.
 
 3단계 완료 후 `create_config_from_onboarding()`으로 `config.json` 저장.
 그 다음 사용자의 원래 요청을 실행합니다.
