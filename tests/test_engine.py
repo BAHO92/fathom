@@ -169,11 +169,15 @@ class TestOutput:
         assert make_slug("Hello World") == "hello-world"
 
     def test_make_slug_korean(self):
-        assert make_slug("송시열") == "unnamed"
+        assert make_slug("송시열") == "송시열"
+
+    def test_make_slug_chinese(self):
+        assert make_slug("宋時烈") == "宋時烈"
 
     def test_make_slug_mixed(self):
         slug = make_slug("Song 시열 test")
         assert "song" in slug
+        assert "시열" in slug
         assert "test" in slug
 
     def test_make_slug_empty(self):

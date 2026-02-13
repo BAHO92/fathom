@@ -9,29 +9,29 @@ from typing import List, Optional, Dict, Any
 
 
 def make_slug(text: str) -> str:
-    """Create ASCII slug from text.
-    
-    - Keep only ASCII letters, digits
+    """Create filesystem-safe slug from text.
+
+    - Keep Unicode letters, digits, underscore
     - Replace spaces and special chars with hyphen
     - Remove consecutive hyphens
     - Max 50 chars
     - Return "unnamed" if empty
-    
+
     Args:
-        text: Input text (may contain Korean, spaces, etc.)
-        
+        text: Input text (Korean, Chinese, ASCII, etc.)
+
     Returns:
-        ASCII lowercase slug with hyphens
+        Filesystem-safe slug with hyphens
     """
     if not text:
         return "unnamed"
-    
-    slug = re.sub(r'[^a-zA-Z0-9]+', '-', text)
+
+    slug = re.sub(r'[^\w]+', '-', text)
     slug = slug.strip('-')
     slug = re.sub(r'-+', '-', slug)
     slug = slug.lower()
     slug = slug[:50].rstrip('-')
-    
+
     return slug if slug else "unnamed"
 
 
