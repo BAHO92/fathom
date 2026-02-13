@@ -301,7 +301,8 @@ class SillokSearcher:
         resp = self.session.post(self.SEARCH_URL, data=self.form_data)
         return BeautifulSoup(resp.text, 'html.parser')
 
-    def search_and_collect(self, keyword: str) -> list:
+    def search_and_collect(self, keyword: str,
+                           limit: int | None = None) -> list:
         """
         키워드 검색 후 모든 페이지에서 결과 수집
 
@@ -323,6 +324,11 @@ class SillokSearcher:
             entries = self.parse_current_page(soup)
             all_entries.extend(entries)
 
+            if limit and len(all_entries) >= limit:
+                all_entries = all_entries[:limit]
+                print(f"  → early limit 적용: {len(all_entries)}건 (page {page}/{total_pages})")
+                break
+
             # 진행 상황 출력 (10페이지마다)
             if page % 10 == 0 or page == total_pages:
                 print(f"    [{page}/{total_pages}] 수집: {len(all_entries)}건")
@@ -333,7 +339,8 @@ class SillokSearcher:
         print(f"  → 수집 완료: {len(all_entries)}건")
         return all_entries
 
-    def search_multiple_keywords(self, keywords: list) -> dict:
+    def search_multiple_keywords(self, keywords: list,
+                                limit: int | None = None) -> dict:
         """
         복수 키워드 검색 및 수집
 
@@ -351,7 +358,8 @@ class SillokSearcher:
         total_before_dedup = 0
 
         for keyword in keywords:
-            entries = self.search_and_collect(keyword)
+            kw_limit = (limit - len(all_entries)) if limit else None
+            entries = self.search_and_collect(keyword, limit=kw_limit)
             keyword_stats[keyword] = len(entries)
             total_before_dedup += len(entries)
 
@@ -360,6 +368,9 @@ class SillokSearcher:
                 if entry['id'] not in seen_ids:
                     seen_ids.add(entry['id'])
                     all_entries.append(entry)
+
+            if limit and len(all_entries) >= limit:
+                break
 
             # 다음 키워드 검색 전 대기
             if keyword != keywords[-1]:

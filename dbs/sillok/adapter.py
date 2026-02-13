@@ -47,17 +47,35 @@ def _convert_to_v31(raw_content: dict, entry: dict) -> dict:
     Returns:
         Article dict conforming to v3.1 schema.
     """
-    # Date info — prefer page-extracted, fall back to entry
+    # Date info — merge page-extracted into entry
     date_info = dict(entry.get("date", {}))
     if raw_content.get("date_info"):
         page_date = raw_content["date_info"]
+        # ganzhi/article_num: page-extracted always wins (more accurate)
         if page_date.get("ganzhi"):
             date_info["ganzhi"] = page_date["ganzhi"]
         if page_date.get("article_num"):
             date_info["article_num"] = page_date["article_num"]
+        # reign/year/month/day: fill-only (don't overwrite existing entry values)
+        for key in ("reign", "year", "month", "day"):
+            page_val = page_date.get(key)
+            if not page_val:
+                continue
+            if not date_info.get(key):
+                date_info[key] = page_val
 
-    # Volume / sillok_name
+    # Normalise reign: strip sillok name suffix (e.g. "인조실록44권," → "인조")
+    reign_raw = date_info.get("reign", "")
+    if reign_raw and ("실록" in reign_raw or "보궐정오" in reign_raw):
+        _reign_clean = re.sub(r'(실록|보궐정오).*', '', reign_raw).strip()
+        if _reign_clean:
+            date_info["reign"] = _reign_clean
+
+    # Volume / sillok_name — try entry.volume_info first, fall back to
+    # date_info.reign which may contain "인조실록44권," in IDs mode
     vol_info = parse_volume_info(entry.get("volume_info", ""))
+    if not vol_info.get("sillok"):
+        vol_info = parse_volume_info(reign_raw)
 
     # Parse page_info string → structured
     page_info_raw = raw_content.get("page_info", "")
@@ -210,7 +228,7 @@ class SillokAdapter(BaseAdapter):
         limit: Optional[int] = None,
     ) -> CrawlResult:
         if selector.type == "query":
-            entries = self._resolve_query(selector)
+            entries = self._resolve_query(selector, limit=limit)
             slug = make_slug(selector.keywords or "query")
             mode = "search"
             raw_req = {
@@ -241,13 +259,14 @@ class SillokAdapter(BaseAdapter):
 
     # ── entry resolvers ──────────────────────────────────────────────
 
-    def _resolve_query(self, selector: Selector) -> List[dict]:
+    def _resolve_query(self, selector: Selector,
+                       limit: Optional[int] = None) -> List[dict]:
         tab = _resolve_tab(selector.layer)
         searcher = SillokSearcher(tab=tab)
         try:
             searcher.setup_session()
             keywords = [k.strip() for k in (selector.keywords or "").split(",") if k.strip()]
-            result = searcher.search_multiple_keywords(keywords)
+            result = searcher.search_multiple_keywords(keywords, limit=limit)
             entries = result["entries"]
 
             if selector.reign:

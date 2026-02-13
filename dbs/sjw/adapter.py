@@ -188,19 +188,19 @@ class SJWAdapter(BaseAdapter):
         limit: Optional[int] = None,
     ) -> CrawlResult:
         if selector.type == "query":
-            entries = self._resolve_query(selector)
+            entries = self._resolve_query(selector, limit=limit)
             slug = make_slug(selector.keywords or "sjw-query")
             mode = "search"
             raw_req = {"keywords": selector.keywords, "field": selector.options.get("field", "all")}
             norm_req = {"keywords": [(selector.keywords or "")], "field": selector.options.get("field", "all")}
         elif selector.type == "time_range":
-            entries = self._resolve_time_range(selector)
+            entries = self._resolve_time_range(selector, limit=limit)
             slug = make_slug(f"{selector.reign or 'sjw'}-{selector.year_from or ''}-{selector.year_to or ''}")
             mode = "time_range"
             raw_req = {"reign": selector.reign, "year_from": selector.year_from, "year_to": selector.year_to}
             norm_req = dict(raw_req)
         elif selector.type == "work_scope":
-            entries = self._resolve_work_scope(selector)
+            entries = self._resolve_work_scope(selector, limit=limit)
             slug = make_slug(selector.work_id or "sjw-scope")
             mode = "work_scope"
             raw_req = {"work_kind": selector.work_kind, "work_id": selector.work_id}
@@ -218,7 +218,8 @@ class SJWAdapter(BaseAdapter):
 
     # ── entry resolvers ──────────────────────────────────────────────
 
-    def _resolve_query(self, selector: Selector) -> List[dict]:
+    def _resolve_query(self, selector: Selector,
+                       limit: Optional[int] = None) -> List[dict]:
         searcher = SjwSearcher()
         try:
             searcher.setup_session()
@@ -228,11 +229,14 @@ class SJWAdapter(BaseAdapter):
             all_entries: List[dict] = []
             seen_ids: set = set()
             for kw in keywords:
-                result = searcher.search_and_collect(kw, field=field)
+                kw_limit = (limit - len(all_entries)) if limit else None
+                result = searcher.search_and_collect(kw, field=field, limit=kw_limit)
                 for e in result["entries"]:
                     if e["id"] not in seen_ids:
                         seen_ids.add(e["id"])
                         all_entries.append(e)
+                if limit and len(all_entries) >= limit:
+                    break
                 if kw != keywords[-1]:
                     time.sleep(1)
 
@@ -240,19 +244,33 @@ class SJWAdapter(BaseAdapter):
         finally:
             searcher.close()
 
-    def _resolve_time_range(self, selector: Selector) -> List[dict]:
+    def _resolve_time_range(self, selector: Selector,
+                            limit: Optional[int] = None) -> List[dict]:
         reign = selector.reign or ""
         entries = browse_collect_entries(
             reign,
             year_from=selector.year_from,
             year_to=selector.year_to,
+            limit=limit,
         )
         return [_normalise_browse_entry(e) for e in entries]
 
-    def _resolve_work_scope(self, selector: Selector) -> List[dict]:
-        """work_scope for SJW = browse entire reign."""
+    def _resolve_work_scope(self, selector: Selector,
+                            limit: Optional[int] = None) -> List[dict]:
+        """work_scope for SJW = browse entire reign.
+
+        segment narrows the year range (e.g. "5" or "5-10").
+        """
         reign = selector.work_id or ""
-        entries = browse_collect_entries(reign)
+        year_from = None
+        year_to = None
+        if selector.segment:
+            parts = selector.segment.split("-", 1)
+            year_from = int(parts[0])
+            year_to = int(parts[1]) if len(parts) > 1 else year_from
+        entries = browse_collect_entries(
+            reign, year_from=year_from, year_to=year_to, limit=limit,
+        )
         return [_normalise_browse_entry(e) for e in entries]
 
     def _resolve_ids(self, selector: Selector) -> List[dict]:
@@ -321,9 +339,17 @@ class SJWAdapter(BaseAdapter):
             try:
                 article_id = entry.get("id", "")
                 raw = fetch_article(session, article_id)
-                is_failure = raw.get("error") or raw.get("original") == "[크롤링 실패]"
+                is_failure = (
+                    raw.get("error")
+                    or raw.get("original") == "[크롤링 실패]"
+                    or (not raw.get("title") and not raw.get("original") and not raw.get("translation"))
+                )
                 if is_failure:
-                    return {"ok": False, "entry": entry, "error": raw.get("error", "Unknown")}
+                    if not raw.get("title") and not raw.get("original") and not raw.get("translation"):
+                        error_msg = "Empty article: no title, original, or translation (site returned empty page for this ID)"
+                    else:
+                        error_msg = raw.get("error", "Unknown")
+                    return {"ok": False, "entry": entry, "error": error_msg}
                 return {"ok": True, "entry": entry, "raw": raw}
             except Exception as exc:
                 return {"ok": False, "entry": entry, "error": str(exc)}

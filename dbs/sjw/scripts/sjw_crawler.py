@@ -172,7 +172,10 @@ def browse_get_day_ids(session: requests.Session, month_id: str,
     resp = session.post(url, data=data, timeout=30)
     king_code = month_id[4]
     pattern = re.compile(rf'SJW-{king_code}\d{{7}}0(?![\d-])')
-    day_ids = sorted(set(pattern.findall(resp.text)))
+    all_ids = sorted(set(pattern.findall(resp.text)))
+    # Filter to requested month only — API may include adjacent-month days
+    month_prefix = month_id[:9]
+    day_ids = [d for d in all_ids if d[:9] == month_prefix]
     return day_ids
 
 
@@ -209,7 +212,8 @@ def browse_get_article_ids(session: requests.Session,
 
 
 def browse_collect_entries(reign: str, year_from: int = None,
-                           year_to: int = None) -> list[dict]:
+                           year_to: int = None,
+                           limit: int | None = None) -> list[dict]:
     """
     날짜 범위로 기사 ID 목록 수집
 
@@ -217,6 +221,7 @@ def browse_collect_entries(reign: str, year_from: int = None,
         reign: 왕대명 (현종, 숙종, ...)
         year_from: 시작 년 (0=즉위년, None=전체)
         year_to: 종료 년 (None=전체)
+        limit: 최대 수집 건수 (None=전체)
 
     Returns:
         기사 엔트리 목록 (sjw_crawler A모드 입력과 호환)
@@ -272,6 +277,10 @@ def browse_collect_entries(reign: str, year_from: int = None,
     for i, day_id in enumerate(all_day_ids):
         entries = browse_get_article_ids(session, day_id)
         all_entries.extend(entries)
+        if limit and len(all_entries) >= limit:
+            all_entries = all_entries[:limit]
+            print(f"  → early limit 적용: {len(all_entries)}건 (day {i+1}/{len(all_day_ids)})")
+            break
         if (i + 1) % 50 == 0 or i == len(all_day_ids) - 1:
             print(f"  [{i+1}/{len(all_day_ids)}] 일 처리, 누적 기사: {len(all_entries)}")
         time.sleep(0.2)

@@ -321,13 +321,29 @@ def fetch_article(session: requests.Session, url: str, retry: int = 3) -> dict:
                 date_text = date_elem.get_text(strip=True)
                 result['date_info'] = parse_date_info(date_text)
 
-            # 제목 추출
+            # 제목 추출 — try known selectors first, then bare <h3> as
+            # fallback for IDs-mode article pages where class-based
+            # selectors don't match.
             for selector in ['h3.view-tit', '.tit_loc', 'h3.page_tit']:
                 title_elem = soup.select_one(selector)
                 if title_elem:
                     title_text = title_elem.get_text(strip=True)
                     if title_text:
                         result['title'] = title_text
+                        break
+            else:
+                # IDs-mode fallback: bare <h3> without class, skip
+                # known structural headings (content-title, etc.)
+                skip_classes = {'content-title'}
+                for h3 in soup.select('h3'):
+                    h3_classes = set(h3.get('class') or [])
+                    if h3_classes & skip_classes:
+                        continue
+                    if h3_classes:
+                        continue
+                    h3_text = h3.get_text(strip=True)
+                    if h3_text:
+                        result['title'] = h3_text
                         break
 
             # 국역/원문 추출

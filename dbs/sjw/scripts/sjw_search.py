@@ -274,7 +274,8 @@ class SjwSearcher:
         return self._parse_entries(soup)
 
     def search_and_collect(self, keyword: str, field: str = 'all',
-                           king_name: str = 'ALL') -> dict:
+                           king_name: str = 'ALL',
+                           limit: int | None = None) -> dict:
         """
         키워드 검색 후 모든 페이지에서 결과 수집
 
@@ -297,6 +298,15 @@ class SjwSearcher:
             return {'total_count': 0, 'entries': [], 'reign_counts': {}}
 
         all_entries = list(first_entries)
+        if limit and len(all_entries) >= limit:
+            all_entries = all_entries[:limit]
+            print(f"  → early limit 적용: {len(all_entries)}건")
+            return {
+                'total_count': total_count,
+                'entries': all_entries,
+                'reign_counts': reign_counts
+            }
+
         total_pages = (total_count + self.ITEMS_PER_PAGE - 1) // self.ITEMS_PER_PAGE
 
         if total_pages > 1:
@@ -306,6 +316,11 @@ class SjwSearcher:
             entries = self.fetch_page(keyword, page, field=field,
                                       king_name=king_name)
             all_entries.extend(entries)
+
+            if limit and len(all_entries) >= limit:
+                all_entries = all_entries[:limit]
+                print(f"  → early limit 적용: {len(all_entries)}건 (page {page}/{total_pages})")
+                break
 
             if page % 10 == 0 or page == total_pages:
                 print(f"    [{page}/{total_pages}] 수집: {len(all_entries)}건")
