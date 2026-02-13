@@ -334,7 +334,8 @@ class TestOnboarding:
         msg = get_appendix_prompt(["sillok", "sjw"])
         assert "day_articles" in msg
         assert "person_annotations" in msg
-        assert "◈" in msg
+        assert "1." in msg
+        assert "번호" in msg
 
     def test_completion_message(self):
         cfg = FathomConfig(enabled_dbs=["sillok"], appendix_fields={"sillok": ["day_articles"]})

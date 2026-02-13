@@ -82,12 +82,21 @@ report = execute(adapter, selector, config, limit=None)
 
 ## 첫 실행 처리
 
-`config.json` 없으면 온보딩: DB 저장 경로, 활성화 DB, Appendix 필드 설정 후 `config.json` 저장.
+`config.json`이 없으면 사용자의 요청을 실행하기 **전에** 반드시 온보딩을 완료해야 합니다.
+
+**3단계 전부 완료 필수 — 어떤 단계도 스킵하지 마세요:**
+
+1. **저장 경로** — `get_db_root_prompt()` 호출 → 사용자 입력 대기
+2. **활성 DB** — `get_db_selection_prompt()` 호출 → 사용자 입력 대기 (사용자의 첫 요청이 특정 DB를 지칭하더라도, 향후 다른 DB 사용을 위해 반드시 설정)
+3. **Appendix 필드** — `get_appendix_prompt(enabled_dbs)` 호출 → 번호로 선택 또는 Enter로 스킵
+
+3단계 완료 후 `create_config_from_onboarding()`으로 `config.json` 저장.
+그 다음 사용자의 원래 요청을 실행합니다.
 
 ```python
-from engine.workflow import check_onboarding
+from engine.onboarding import check_onboarding
 if check_onboarding():
-    # 온보딩 안내: "처음 사용하시는군요! 간단한 설정을 진행하겠습니다."
+    # 반드시 3단계 전부 진행 후 config.json 저장
 ```
 
 ---

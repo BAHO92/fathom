@@ -85,6 +85,27 @@ def get_db_selection_prompt() -> str:
     return "\n".join(lines)
 
 
+def _build_appendix_index(enabled_dbs: List[str]) -> List[dict]:
+    """Build a globally-numbered index of appendix fields.
+
+    Returns:
+        List of dicts with keys: num (1-based), db_id, field_name, desc.
+    """
+    index: List[dict] = []
+    num = 1
+    for db_id in enabled_dbs:
+        catalog = APPENDIX_CATALOG.get(db_id, {})
+        for field_name, desc in catalog.items():
+            index.append({
+                "num": num,
+                "db_id": db_id,
+                "field_name": field_name,
+                "desc": desc,
+            })
+            num += 1
+    return index
+
+
 def get_appendix_prompt(enabled_dbs: List[str]) -> str:
     """Return the appendix field selection prompt.
 
@@ -92,26 +113,30 @@ def get_appendix_prompt(enabled_dbs: List[str]) -> str:
         enabled_dbs: List of enabled DB IDs.
 
     Returns:
-        Formatted prompt listing appendix fields per DB.
+        Formatted prompt listing numbered appendix fields per DB.
     """
+    index = _build_appendix_index(enabled_dbs)
+    if not index:
+        return ""
+
     lines = [
         "추가 수집 필드(appendix)를 설정하시겠습니까?\n",
         "appendix 필드는 렌더링/네비게이션용 부수 데이터입니다.",
         "기본값은 수집하지 않으며, 필요한 항목만 선택하실 수 있습니다.\n",
     ]
 
-    for db_id in enabled_dbs:
-        catalog = APPENDIX_CATALOG.get(db_id, {})
-        if not catalog:
-            continue
-        db_name = DB_DISPLAY_NAMES.get(db_id, db_id)
-        lines.append(f"[{db_name}]")
-        for field_name, desc in catalog.items():
-            lines.append(f"  ◈ {field_name}: {desc}")
-        lines.append("")
+    current_db = None
+    for item in index:
+        if item["db_id"] != current_db:
+            if current_db is not None:
+                lines.append("")
+            current_db = item["db_id"]
+            db_name = DB_DISPLAY_NAMES.get(current_db, current_db)
+            lines.append(f"[{db_name}]")
+        lines.append(f"  {item['num']}. {item['field_name']}: {item['desc']}")
 
-    lines.append("DB별로 활성화할 필드를 알려 주세요.")
-    lines.append('(예: "sillok: day_articles, prev_article_id")')
+    lines.append("")
+    lines.append("활성화할 번호를 쉼표로 구분하여 입력해 주세요. (예: 1, 3, 7)")
     lines.append("Enter를 누르시면 appendix 없이 core 필드만 수집합니다.")
     return "\n".join(lines)
 
@@ -179,8 +204,9 @@ def parse_appendix_selection(
 ) -> Dict[str, List[str]]:
     """Parse user's appendix field selection.
 
-    Supports format: ``"sillok: field1, field2; sjw: field3"``
-    or ``"sillok: field1, field2"`` (single DB).
+    Supports two formats:
+      - Number-based: ``"1, 3, 7"`` (matches globally-numbered index)
+      - Legacy named: ``"sillok: day_articles, prev_article_id"``
 
     Args:
         user_input: User input string.
@@ -194,25 +220,33 @@ def parse_appendix_selection(
     if not user_input.strip():
         return result
 
-    # Split by semicolon for multi-DB, or parse single DB
-    segments = user_input.split(";") if ";" in user_input else [user_input]
-
-    for segment in segments:
-        segment = segment.strip()
-        if ":" in segment:
+    # Detect format: if input contains ":" it's legacy named format
+    if ":" in user_input:
+        segments = user_input.split(";") if ";" in user_input else [user_input]
+        for segment in segments:
+            segment = segment.strip()
+            if ":" not in segment:
+                continue
             db_part, fields_part = segment.split(":", 1)
             db_id = db_part.strip().lower()
-        else:
-            continue
-
-        if db_id not in result:
-            continue
-
-        catalog = APPENDIX_CATALOG.get(db_id, {})
-        for token in fields_part.split(","):
-            field = token.strip()
-            if field in catalog:
-                result[db_id].append(field)
+            if db_id not in result:
+                continue
+            catalog = APPENDIX_CATALOG.get(db_id, {})
+            for token in fields_part.split(","):
+                field = token.strip()
+                if field in catalog:
+                    result[db_id].append(field)
+    else:
+        # Number-based selection
+        index = _build_appendix_index(enabled_dbs)
+        num_map = {item["num"]: item for item in index}
+        for token in user_input.split(","):
+            token = token.strip()
+            if token.isdigit():
+                num = int(token)
+                if num in num_map:
+                    item = num_map[num]
+                    result[item["db_id"]].append(item["field_name"])
 
     return result
 

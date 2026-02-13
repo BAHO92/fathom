@@ -77,7 +77,7 @@ To update an existing installation, just run the quick install command again. It
 
 ## Initial Setup
 
-After installing fathom, **the first time you request a crawl**, Claude will automatically guide you through setup. No need to create config files manually.
+After installing fathom, **the first time you request a crawl**, Claude will automatically guide you through setup. No need to create config files manually. Complete the 3 steps below once, and you're ready to start collecting.
 
 ### Setup Flow
 
