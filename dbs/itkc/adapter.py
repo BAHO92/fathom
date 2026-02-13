@@ -164,18 +164,26 @@ class ITKCAdapter(BaseAdapter):
 
     def _count_query(self, selector: Selector) -> CountResult:
         collection_id = selector.work_id or selector.options.get("collection")
-        keywords = selector.keywords or ""
         sec_id = selector.options.get("secId", "MO_BD")
         if collection_id and sec_id == "MO_BD":
             sec_id = get_sec_id_for_collection(collection_id, "BD")
 
-        if collection_id:
-            q_param = f"query†{keywords}$opDir†{collection_id}"
-        else:
-            q_param = f"query†{keywords}"
+        kw_list = [k.strip() for k in (selector.keywords or "").split(",") if k.strip()]
+        if not kw_list:
+            return CountResult(kind="exact", count=0)
 
-        result = fetch_api({"secId": sec_id, "q": q_param, "start": 0, "rows": 1})
-        return CountResult(kind="exact", count=result["total_count"])
+        total = 0
+        for kw in kw_list:
+            if collection_id:
+                q_param = f"query†{kw}$opDir†{collection_id}"
+            else:
+                q_param = f"query†{kw}"
+            result = fetch_api({"secId": sec_id, "q": q_param, "start": 0, "rows": 1})
+            total += result["total_count"]
+
+        # 단일 키워드면 exact, 복수면 중복 가능하므로 estimate
+        kind = "exact" if len(kw_list) == 1 else "estimate"
+        return CountResult(kind=kind, count=total)
 
     def _count_work_scope(self, selector: Selector) -> CountResult:
         collection_id = selector.work_id or ""
@@ -222,17 +230,36 @@ class ITKCAdapter(BaseAdapter):
 
     def _resolve_query(self, selector: Selector, limit: Optional[int]) -> List[dict]:
         collection_id = selector.work_id or selector.options.get("collection")
-        keywords = selector.keywords or ""
         sec_id = selector.options.get("secId", "MO_BD")
         if collection_id and sec_id == "MO_BD":
             sec_id = get_sec_id_for_collection(collection_id, "BD")
 
-        return fetch_article_list_search(
-            collection_id=collection_id,
-            query=keywords,
-            sec_id=sec_id,
-            limit=limit,
-        )
+        kw_list = [k.strip() for k in (selector.keywords or "").split(",") if k.strip()]
+        if not kw_list:
+            return []
+
+        all_articles: List[dict] = []
+        seen_ids: set = set()
+
+        for kw in kw_list:
+            kw_limit = (limit - len(all_articles)) if limit else None
+            articles = fetch_article_list_search(
+                collection_id=collection_id,
+                query=kw,
+                sec_id=sec_id,
+                limit=kw_limit,
+            )
+            for art in articles:
+                data_id = art.get("자료ID", "")
+                if data_id and data_id not in seen_ids:
+                    seen_ids.add(data_id)
+                    all_articles.append(art)
+            if limit and len(all_articles) >= limit:
+                break
+            if kw != kw_list[-1]:
+                time.sleep(1)
+
+        return all_articles
 
     def _resolve_work_scope(self, selector: Selector, limit: Optional[int]) -> List[dict]:
         collection_id = selector.work_id or ""

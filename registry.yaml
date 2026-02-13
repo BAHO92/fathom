@@ -22,7 +22,6 @@ databases:
     scripts:
       crawl: dbs/sillok/scripts/sillok_crawler.py
       search: dbs/sillok/scripts/sillok_search.py
-      index_sync: dbs/sillok/scripts/sillok_index_sync.py
 
   sjw:
     name: 승정원일기
@@ -59,4 +58,3 @@ databases:
       - indent_levels
     scripts:
       crawl: dbs/itkc/scripts/munzip_crawler.py
-      index_sync: dbs/itkc/scripts/munzip_index_sync.py
