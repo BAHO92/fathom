@@ -16,18 +16,64 @@ Claude Code 스킬로 설치하여 사용하는 JSONL v3.1 통합 크롤러입�
 
 ## 설치
 
-### 자동 설치
+### 사전 준비
+
+fathom을 설치하려면 아래 두 가지가 컴퓨터에 설치되어 있어야 합니다.
+
+| 프로그램 | 최소 버전 | 확인 방법 (터미널에 입력) |
+|----------|-----------|--------------------------|
+| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | — | `claude --version` |
+| Python | 3.8 이상 | `python3 --version` |
+
+> **터미널 여는 법**
+> - **Mac**: `Cmd + Space` → "터미널" 검색 → 열기
+> - **Windows**: `Win + R` → `cmd` 입력 → 확인
+> - **Linux**: `Ctrl + Alt + T`
+
+아직 설치되지 않은 경우:
+
+- **Claude Code**: [공식 설치 안내](https://docs.anthropic.com/en/docs/claude-code)를 따라 설치합니다.
+- **Python**: [python.org/downloads](https://www.python.org/downloads/)에서 다운로드합니다. Mac에는 보통 기본 설치되어 있습니다.
+
+### 자동 설치 (권장)
+
+터미널을 열고 아래 한 줄을 복사하여 붙여넣은 뒤 Enter를 누릅니다:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/BAHO92/fathom/main/install.sh | bash
 ```
 
+설치가 완료되면 아래와 같은 메시지가 나타납니다:
+
+```
+=== Installation complete ===
+fathom installed at: ~/.claude/skills/fathom
+```
+
+이후 Claude Code를 열고 바로 사용할 수 있습니다.
+
 ### 수동 설치
+
+자동 설치가 동작하지 않는 경우, 터미널에서 아래 두 줄을 순서대로 실행합니다:
 
 ```bash
 git clone https://github.com/BAHO92/fathom.git ~/.claude/skills/fathom
 pip3 install requests beautifulsoup4 lxml pyyaml
 ```
+
+### 업데이트
+
+이미 설치된 상태에서 최신 버전으로 업데이트하려면, 자동 설치 명령을 다시 실행하면 됩니다. 기존 설치를 감지하여 자동으로 업데이트합니다.
+
+### 설치 확인
+
+Claude Code를 열고 아래처럼 입력해 보세요:
+
+```
+"실록에서 '송시열' 검색해줘"
+```
+
+fathom이 응답하면 설치가 정상적으로 된 것입니다.
 
 ## 사용 방법
 
